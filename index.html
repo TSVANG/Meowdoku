@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Meowdoku - Логическая игра</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;900&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #FAF7F2;
+            color: #6C5446;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        /* Виды экрана */
+        .view-section {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .view-section.active {
+            display: flex;
+        }
+
+        /* Игровое поле */
+        .game-board {
+            display: grid;
+            gap: 4px;
+            padding: 6px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s ease, filter 0.2s ease;
+        }
+        
+        .cell:active { transform: scale(0.92); }
+
+        /* Палитра цветов для бесконечных уровней (до 10 зон) */
+        .color-0 { background-color: #3EB1C8; } /* Cyan */
+        .color-1 { background-color: #F6A8E0; } /* Pink */
+        .color-2 { background-color: #FCE182; } /* Yellow */
+        .color-3 { background-color: #C3A11A; } /* Dark Yellow */
+        .color-4 { background-color: #C96C88; } /* Dark Pink */
+        .color-5 { background-color: #9A8BDE; } /* Purple */
+        .color-6 { background-color: #69F0AE; } /* Green */
+        .color-7 { background-color: #FF6E40; } /* Orange */
+        .color-8 { background-color: #5C6BC0; } /* Indigo */
+        .color-9 { background-color: #BCAAA4; } /* Brown */
+
+        /* Иконки на поле */
+        .cat-icon {
+            width: 90%;
+            height: 90%;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
+            z-index: 10;
+        }
+        .cross-icon {
+            width: 75%;
+            height: 75%;
+            color: white;
+            animation: fadeIn 0.2s ease-in-out;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+        }
+        .cross-auto { opacity: 0.7; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            70% { transform: scale(1.1) rotate(5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        /* Обновленные рамки с правилами (Пункт 9) */
+        .rule-card {
+            background: linear-gradient(145deg, #ffffff, #fcf8f5);
+            border: 2px solid #F2E3D5;
+            border-radius: 12px;
+            padding: 8px 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            color: #7D6B5D;
+            box-shadow: 0 4px 8px rgba(108, 84, 70, 0.05);
+            flex: 1;
+            line-height: 1.1;
+            transition: transform 0.2s;
+        }
+        .rule-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(108, 84, 70, 0.08); }
+        .rule-icon {
+            width: 30px;
+            height: 30px;
+            flex-shrink: 0;
+            border-radius: 6px;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background-color: #EADCD1;
+            border: 1px solid #EADCD1;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+        }
+        .rule-icon > div { background-color: #FAF7F2; display: flex; align-items: center; justify-content: center; }
+
+        /* Кнопки инструментов */
+        .action-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: white;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            border: 4px solid transparent;
+        }
+        .action-btn:active { transform: scale(0.92); }
+        .action-btn.active-tool {
+            border-color: #F4A261;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(244, 162, 97, 0.25);
+        }
+
+        .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #E76F51;
+            color: white;
+            border-radius: 50%;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 900;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Переключатели в настройках (Пункт 4) */
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label .dot {
+            transform: translateX(1.5rem);
+        }
+        .toggle-checkbox {
+            display: none;
+        }
+        .toggle-label {
+            width: 3rem;
+            height: 1.5rem;
+            background-color: #E2E8F0;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .toggle-label .dot {
+            position: absolute;
+            left: 0.25rem;
+            top: 0.25rem;
+            background-color: white;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0e6df;
+        }
+
+        /* Модальные окна и эффекты */
+        .modal-overlay {
+            background: rgba(40, 30, 20, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+        }
+        #particles, #floating-texts {
+            pointer-events: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 50;
+            overflow: hidden;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #E76F51;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(231,111,81,0.4);
+            pointer-events: none;
+        }
+
+        /* Анимация Главного меню */
+        .logo-cat {
+            animation: bounce-slow 3s infinite;
+        }
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body class="bg-[#FAF7F2]">
+
+    <!-- ГЛАВНОЕ МЕНЮ (Пункт 2) -->
+    <div id="main-menu" class="view-section active justify-center items-center px-6">
+        <div class="text-9xl mb-4 logo-cat filter drop-shadow-lg">😸</div>
+        <h1 class="text-5xl font-black text-[#6C5446] mb-2 tracking-wide text-center">Meowdoku</h1>
+        <p class="text-[#A39183] font-bold mb-10 text-center text-lg">Логические головоломки</p>
+        
+        <button onclick="startGame()" class="w-full max-w-xs bg-[#F4A261] hover:bg-[#E76F51] text-white font-black py-4 rounded-2xl text-2xl shadow-[0_8px_0_#D95D39] active:shadow-[0_0px_0_#D95D39] active:translate-y-2 transition-all mb-6">
+            ИГРАТЬ
+        </button>
+        <button onclick="openSettings()" class="w-full max-w-xs bg-white text-[#6C5446] font-bold py-4 rounded-2xl text-xl shadow-[0_6px_0_#EADCD1] active:shadow-[0_0px_0_#EADCD1] active:translate-y-2 transition-all">
+            <i class="fa fa-cog mr-2"></i> Настройки
+        </button>
+    </div>
+
+    <!-- ОКНО НАСТРОЕК (Пункт 4 и 5) -->
+    <div id="settings-modal" class="fixed inset-0 modal-overlay flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300" id="settings-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-black text-[#6C5446]">Настройки</h2>
+                <button onclick="closeSettings()" class="w-10 h-10 rounded-full bg-[#FAF7F2] text-[#6C5446] flex items-center justify-center font-bold text-xl active:scale-90 transition">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="flex flex-col mb-6">
+                <div class="toggle-container">
+                    <span class="font-bold text-lg text-[#6C5446]"><i class="fa fa-volume-up w-6 text-center mr-2 text-[#F4A261]"></i> Звук</span>
+                    <label class="relative inline-block w-12 align-middle select-none cursor-pointer">
+                        <input type="checkbox" id="setting-sound" class="toggle-checkbox" checked/>
+                        <div class="toggle-label"><span class="dot"></span></div>
+                    </label>
+                </div>
+                <div class="toggle-container">
+                    <span class="font-bold text-lg text-[#6C5446]"><i class="fa fa-music w-6 text-center mr-2 text-[#F4A261]"></i> Музыка</span>
+                    <label class="relative inline-block w-12 align-middle select-none cursor-pointer">
+                        <input type="checkbox" id="setting-music" class="toggle-checkbox" checked/>
+                        <div class="toggle-label"><span class="dot"></span></div>
+                    </label>
+                </div>
+                <div class="toggle-container border-none">
+                    <span class="font-bold text-lg text-[#6C5446]"><i class="fa fa-mobile-alt w-6 text-center mr-2 text-[#F4A261]"></i> Вибрация</span>
+                    <label class="relative inline-block w-12 align-middle select-none cursor-pointer">
+                        <input type="checkbox" id="setting-vibro" class="toggle-checkbox" checked/>
+                        <div class="toggle-label"><span class="dot"></span></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Панель разработчика (Пункт 5) -->
+            <div class="bg-[#FAF7F2] p-4 rounded-2xl mb-2 border border-[#EADCD1]">
+                <h3 class="font-black text-[#6C5446] mb-3 text-sm uppercase tracking-wider"><i class="fa fa-code mr-1"></i> Панель разработчика</h3>
+                <div class="flex gap-2">
+                    <input type="number" id="dev-level-input" placeholder="№ уровня" class="flex-1 bg-white border border-[#D9C8B8] rounded-xl px-3 py-2 font-bold text-[#6C5446] focus:outline-none focus:border-[#F4A261]">
+                    <button onclick="devLoadLevel()" class="bg-[#3EB1C8] hover:bg-[#349FB5] text-white font-bold px-4 py-2 rounded-xl transition-colors">
+                        Загрузить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ИГРОВОЙ ЭКРАН -->
+    <div id="game-view" class="view-section overflow-y-auto pb-10">
+        <!-- Шапка -->
+        <header class="px-5 py-4 flex items-center justify-between sticky top-0 bg-[#FAF7F2] z-40">
+            <button onclick="goToMenu()" class="w-12 h-12 rounded-full flex items-center justify-center text-[#B5A496] bg-white shadow-sm hover:bg-gray-50 active:scale-90 transition">
+                <i class="fa fa-arrow-left text-xl"></i>
+            </button>
+            <div class="flex gap-10 text-center">
+                <div>
+                    <div class="text-[0.65rem] font-black uppercase tracking-widest text-[#B5A496]">Уровень</div>
+                    <div class="text-2xl font-black text-[#6C5446] leading-none mt-1" id="level-display">1</div>
+                </div>
+                <div>
+                    <div class="text-[0.65rem] font-black uppercase tracking-widest text-[#B5A496]">Очки</div>
+                    <div class="text-2xl font-black text-[#6C5446] leading-none mt-1" id="score-display">0</div>
+                </div>
+            </div>
+            <button onclick="openSettings()" class="w-12 h-12 rounded-full flex items-center justify-center text-[#B5A496] relative bg-white shadow-sm hover:bg-gray-50 active:scale-90 transition">
+                <i class="fa fa-cog text-xl"></i>
+            </button>
+        </header>
+
+        <div class="px-4 mb-4 flex flex-col items-center gap-4">
+            <div class="flex items-center gap-6 w-full justify-center">
+                <!-- Прогресс котов -->
+                <div class="bg-white rounded-full px-5 py-2 shadow-sm flex items-center gap-2 font-black text-xl text-[#2E7D32]">
+                    <svg width="28" height="28" viewBox="0 0 100 100" class="drop-shadow-sm">
+                        <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
+                        <path d="M50,95 C20,95 5,75 10,45 C15,20 30,15 50,15 C70,15 85,20 90,45 C95,75 80,95 50,95 Z" fill="#333"/>
+                        <path d="M50,45 C35,45 25,60 25,75 C25,85 35,95 50,95 C65,95 75,85 75,75 C75,60 65,45 50,45 Z" fill="#FFF"/>
+                        <circle cx="35" cy="55" r="8" fill="#4CAF50"/><circle cx="65" cy="55" r="8" fill="#4CAF50"/>
+                        <circle cx="35" cy="55" r="4" fill="#000"/><circle cx="65" cy="55" r="4" fill="#000"/>
+                        <path d="M47,68 L53,68 L50,72 Z" fill="#F6A8E0"/>
+                    </svg>
+                    <span id="cat-progress">0/4</span>
+                </div>
+                <!-- Жизни -->
+                <div class="flex gap-1.5" id="lives-container"></div>
+            </div>
+
+            <!-- Правила (Пункт 9) -->
+            <div class="flex w-full gap-2 px-1 max-w-[450px] mx-auto">
+                <div class="rule-card">
+                    <div class="rule-icon">
+                        <div style="background:#F6A8E0"><span class="text-[8px] opacity-40">X</span></div><div style="background:#FCE182"><span class="text-[8px] opacity-40">X</span></div><div style="background:#FCE182"><span class="text-[8px] opacity-40">X</span></div>
+                        <div style="background:#F6A8E0">🐱</div><div style="background:#FCE182"><span class="text-[8px] opacity-40">X</span></div><div style="background:#FCE182"><span class="text-[8px] opacity-40">X</span></div>
+                        <div style="background:#F6A8E0"><span class="text-[8px] opacity-40">X</span></div><div style="background:#3EB1C8">🐱</div><div style="background:#3EB1C8"><span class="text-[8px] opacity-40">X</span></div>
+                    </div>
+                    <span>1 кошка на<br>цвет</span>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">
+                        <div><span class="text-[8px] opacity-40">X</span></div><div>🐱</div><div><span class="text-[8px] opacity-40">X</span></div>
+                        <div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div>
+                        <div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div>
+                    </div>
+                    <span>1 кошка на<br>ряд/столбец</span>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon">
+                        <div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div>
+                        <div><span class="text-[8px] opacity-40">X</span></div><div>🐱</div><div><span class="text-[8px] opacity-40">X</span></div>
+                        <div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div>
+                    </div>
+                    <span>Кошки не<br>касаются</span>
+                </div>
+            </div>
+        </div>
+
+        <main class="flex flex-col items-center justify-center p-4">
+            <div id="board" class="game-board">
+                <!-- Клетки генерируются JS -->
+            </div>
+        </main>
+
+        <!-- Инструменты -->
+        <footer class="p-6 pb-8 flex justify-center gap-12 mt-auto">
+            <!-- Кнопка Подсказка-Кот (Пункт 2 - 100 шт) -->
+            <button class="action-btn" onclick="useCatHint()">
+                <svg viewBox="0 0 100 100" class="w-[60%] h-[60%]">
+                    <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
+                    <path d="M50,95 C20,95 5,75 10,45 C15,20 30,15 50,15 C70,15 85,20 90,45 C95,75 80,95 50,95 Z" fill="#333"/>
+                    <path d="M50,45 C35,45 25,60 25,75 C25,85 35,95 50,95 C65,95 75,85 75,75 C75,60 65,45 50,45 Z" fill="#FFF"/>
+                    <circle cx="35" cy="55" r="8" fill="#4CAF50"/><circle cx="65" cy="55" r="8" fill="#4CAF50"/>
+                    <circle cx="35" cy="55" r="4" fill="#000"/><circle cx="65" cy="55" r="4" fill="#000"/>
+                    <path d="M47,68 L53,68 L50,72 Z" fill="#F6A8E0"/>
+                    <path d="M38,75 Q50,85 62,75" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <div class="badge" id="hints-cat-count">100</div>
+            </button>
+            
+            <!-- Кнопка Подсказки-Лампы (Пункт 6 - 100 шт) -->
+            <button class="action-btn" onclick="useBulbHint()">
+                <svg viewBox="0 0 24 24" class="w-[50%] h-[50%]" fill="none" stroke="#F4A261" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"></path>
+                    <path d="M9 18h6"></path><path d="M10 22h4"></path>
+                </svg>
+                <div class="badge bg-[#F4A261] border-white" id="hints-bulb-count">100</div>
+            </button>
+        </footer>
+    </div>
+
+    <div id="toast" class="toast">Мяу! Ошибка!</div>
+
+    <div id="complete-modal" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
+        <div class="bg-transparent rounded-3xl p-6 max-w-sm w-full mx-4 flex flex-col items-center text-center transform scale-90 transition-transform duration-500" id="modal-content">
+            <div class="text-8xl mb-2 filter drop-shadow-2xl animate-bounce">😸🎺</div>
+            <h2 class="text-5xl font-black text-white mb-4 tracking-wide drop-shadow-lg" style="text-shadow: 0 4px 8px rgba(0,0,0,0.5);">Безупречно</h2>
+            <p class="text-[#FCE182] font-bold text-lg mb-8 drop-shadow-md">Чистый послужной список! Ты делаешь это подозрительно легко!</p>
+            
+            <button onclick="nextLevel()" class="w-full bg-[#F4A261] hover:bg-[#E76F51] text-white font-black py-4 rounded-2xl text-2xl shadow-[0_8px_0_#D95D39] active:shadow-[0_0px_0_#D95D39] active:translate-y-2 transition-all">
+                Уровень <span id="next-level-btn-text">2</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="floating-texts"></div>
+    <div id="particles"></div>
+
+    <script>
+        // --- СОСТОЯНИЕ И НАСТРОЙКИ ---
+        const state = {
+            levelIdx: 0,
+            score: 0,
+            lives: 3,
+            hintsCat: 100,
+            hintsBulb: 100,
+            grid: [], // 0: пусто, 1: крестик юзера, 2: крестик авто, 3: кот
+            placedCats: 0,
+            settings: {
+                sound: true,
+                music: true,
+                vibration: true
+            }
+        };
+
+        // Хардкод первых двух уровней
+        const STORED_LEVELS = [
+            { // Уровень 1 (4x4)
+                size: 4,
+                regions: [[0, 1, 2, 2], [0, 2, 2, 3], [0, 0, 2, 3], [0, 2, 2, 2]],
+                solution: [[0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0]]
+            },
+            { // Уровень 2 (5x5)
+                size: 5,
+                regions: [[1, 1, 1, 2, 3], [1, 1, 4, 2, 3], [1, 1, 2, 2, 2], [1, 2, 2, 2, 2], [5, 5, 5, 5, 5]],
+                solution: [[0, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 1, 0, 0, 0]]
+            }
+        ];
+
+        const SVGS = {
+            cat: `<svg viewBox="0 0 100 100" class="cat-icon">
+                    <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
+                    <path d="M50,95 C20,95 5,75 10,45 C15,20 30,15 50,15 C70,15 85,20 90,45 C95,75 80,95 50,95 Z" fill="#333"/>
+                    <path d="M50,45 C35,45 25,60 25,75 C25,85 35,95 50,95 C65,95 75,85 75,75 C75,60 65,45 50,45 Z" fill="#FFF"/>
+                    <circle cx="35" cy="55" r="8" fill="#4CAF50"/><circle cx="65" cy="55" r="8" fill="#4CAF50"/>
+                    <circle cx="35" cy="55" r="4" fill="#000"/><circle cx="65" cy="55" r="4" fill="#000"/>
+                    <path d="M47,68 L53,68 L50,72 Z" fill="#F6A8E0"/>
+                    <path d="M38,75 Q50,85 62,75" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+                  </svg>`,
+            cross: `<svg viewBox="0 0 24 24" class="cross-icon" fill="none" stroke="currentColor">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>`,
+            fish: `<svg width="28" height="28" viewBox="0 0 24 24" fill="#FFC107" class="drop-shadow-sm"><path d="M20 7C17.2 7 15 9.2 15 12C15 14.8 17.2 17 20 17L22 12L20 7ZM2 12C2 15.3 4.7 18 8 18H10C10 18 14 16 14 12C14 8 10 6 10 6H8C4.7 6 2 8.7 2 12ZM8 10C9.1 10 10 10.9 10 12C10 13.1 9.1 14 8 14C6.9 14 6 13.1 6 12C6 10.9 6.9 10 8 10Z"/></svg>`,
+            fishEmpty: `<svg width="28" height="28" viewBox="0 0 24 24" fill="#D7CCC8"><path d="M20 7C17.2 7 15 9.2 15 12C15 14.8 17.2 17 20 17L22 12L20 7ZM2 12C2 15.3 4.7 18 8 18H10C10 18 14 16 14 12C14 8 10 6 10 6H8C4.7 6 2 8.7 2 12ZM8 10C9.1 10 10 10.9 10 12C10 13.1 9.1 14 8 14C6.9 14 6 13.1 6 12C6 10.9 6.9 10 8 10Z"/></svg>`
+        };
+
+        const boardEl = document.getElementById('board');
+        let currentLevelData = null;
+        let lastTap = { r: -1, c: -1, time: 0 };
+
+        // Утилиты
+        function playHaptic(ms = 40) {
+            if (state.settings.vibration && navigator.vibrate) navigator.vibrate(ms);
+        }
+
+        // --- ГЕНЕРАТОР УРОВНЕЙ (Пункт 3 и 8) ---
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function getLevelSize(lvlNum) {
+            if (lvlNum === 1) return 4;
+            if (lvlNum === 2) return 5;
+            if (lvlNum >= 3 && lvlNum <= 5) return getRandomInt(5, 6);
+            if (lvlNum >= 6 && lvlNum <= 8) return getRandomInt(5, 7);
+            if (lvlNum >= 9 && lvlNum <= 11) return getRandomInt(5, 8);
+            if (lvlNum >= 12 && lvlNum <= 13) return getRandomInt(6, 9);
+            if (lvlNum >= 14 && lvlNum <= 16) return getRandomInt(6, 10);
+            return getRandomInt(5, 10);
+        }
+
+        function generateStarBattle(size) {
+            // Пытаемся сгенерировать поле с правильными котами и регионами
+            for(let attempt = 0; attempt < 100; attempt++) {
+                let solution = generateCatPlacement(size);
+                if (!solution) continue;
+                
+                let regions = generateRegions(size, solution);
+                if (!regions) continue;
+                
+                // В браузере полный DFS-поиск уникальности для 10x10 может занять время.
+                // Применим упрощенный генератор. Гарантируем, что сгенерированное решение - рабочее.
+                return { size, solution, regions };
+            }
+            // Фолбэк, если генератор застрял
+            let fallbackSol = Array(size).fill(0).map((_, i) => {
+                let r = Array(size).fill(0);
+                r[i] = 1;
+                return r; // Диагональ (очень простой случай, но лучше зависания)
+            });
+            let fallbackReg = Array(size).fill(0).map((_, r) => Array(size).fill(r));
+            return { size, solution: fallbackSol, regions: fallbackReg };
+        }
+
+        function generateCatPlacement(N) {
+            let grid = Array(N).fill(0).map(()=>Array(N).fill(0));
+            let cols = Array(N).fill(false);
+            
+            function isValidPlace(r, c) {
+                for(let dr = -1; dr <= 1; dr++) {
+                    for(let dc = -1; dc <= 1; dc++) {
+                        let nr = r + dr, nc = c + dc;
+                        if(nr >= 0 && nr < N && nc >= 0 && nc < N && grid[nr][nc] === 1) return false;
+                    }
+                }
+                return true;
+            }
+
+            function solve(r) {
+                if (r === N) return true;
+                let cOrder = Array.from({length: N}, (_, i) => i).sort(() => Math.random() - 0.5);
+                for(let c of cOrder) {
+                    if (cols[c] || !isValidPlace(r, c)) continue;
+                    grid[r][c] = 1;
+                    cols[c] = true;
+                    if(solve(r+1)) return true;
+                    grid[r][c] = 0;
+                    cols[c] = false;
+                }
+                return false;
+            }
+            return solve(0) ? grid : null;
+        }
+
+        function generateRegions(N, solGrid) {
+            let regions = Array(N).fill(0).map(()=>Array(N).fill(-1));
+            let cats = [];
+            for(let r=0; r<N; r++) {
+                for(let c=0; c<N; c++) {
+                    if(solGrid[r][c] === 1) {
+                        cats.push({r, c});
+                        regions[r][c] = cats.length - 1;
+                    }
+                }
+            }
+
+            let unassigned = N * N - N;
+            let edges = cats.map(cat => [{r: cat.r, c: cat.c}]);
+            let weights = cats.map(() => Math.random() * 10 + 1); // Для разброса кол-ва клеток в зонах
+            
+            while(unassigned > 0) {
+                // Ищем регионы с доступными краями
+                let activeRegions = edges.map((e, idx) => e.length > 0 ? idx : -1).filter(i => i !== -1);
+                if (activeRegions.length === 0) return null; // Тупик
+
+                let totalWeight = activeRegions.reduce((sum, idx) => sum + weights[idx], 0);
+                let rand = Math.random() * totalWeight;
+                let rId = activeRegions[0];
+                for(let idx of activeRegions) {
+                    if(rand < weights[idx]) { rId = idx; break; }
+                    rand -= weights[idx];
+                }
+
+                let eIdx = Math.floor(Math.random() * edges[rId].length);
+                let eCell = edges[rId][eIdx];
+
+                // Соседи
+                let neighbors = [
+                    {r: eCell.r-1, c: eCell.c}, {r: eCell.r+1, c: eCell.c},
+                    {r: eCell.r, c: eCell.c-1}, {r: eCell.r, c: eCell.c+1}
+                ].filter(n => n.r>=0 && n.r<N && n.c>=0 && n.c<N && regions[n.r][n.c] === -1);
+
+                if(neighbors.length > 0) {
+                    let n = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    regions[n.r][n.c] = rId;
+                    edges[rId].push(n);
+                    unassigned--;
+                } else {
+                    edges[rId].splice(eIdx, 1);
+                }
+            }
+            return regions;
+        }
+
+        // --- ЛОГИКА ИГРЫ ---
+        function getLevelData(idx) {
+            if (idx < STORED_LEVELS.length) return STORED_LEVELS[idx];
+            // Кэшируем сгенерированные уровни
+            if (!STORED_LEVELS[idx]) {
+                let size = getLevelSize(idx + 1);
+                STORED_LEVELS[idx] = generateStarBattle(size);
+            }
+            return STORED_LEVELS[idx];
+        }
+
+        function initLevel() {
+            currentLevelData = getLevelData(state.levelIdx);
+            state.grid = Array(currentLevelData.size).fill().map(() => Array(currentLevelData.size).fill(0));
+            state.placedCats = 0;
+            state.lives = 3;
+            
+            // Пункт 7: В начале каждого уровня один кот должен быть открыт
+            preFillRandomCat();
+
+            updateUI();
+            renderBoard();
+        }
+
+        function preFillRandomCat() {
+            let cats = [];
+            for (let r = 0; r < currentLevelData.size; r++) {
+                for (let c = 0; c < currentLevelData.size; c++) {
+                    if (currentLevelData.solution[r][c] === 1) cats.push({r, c});
+                }
+            }
+            let randCat = cats[Math.floor(Math.random() * cats.length)];
+            state.grid[randCat.r][randCat.c] = 3;
+            state.placedCats = 1;
+            // Убрано автозаполнение крестиков при старте уровня
+        }
+
+        function renderBoard() {
+            boardEl.style.gridTemplateColumns = `repeat(${currentLevelData.size}, 1fr)`;
+            boardEl.innerHTML = '';
+            
+            for (let r = 0; r < currentLevelData.size; r++) {
+                for (let c = 0; c < currentLevelData.size; c++) {
+                    const cell = document.createElement('div');
+                    const region = currentLevelData.regions[r][c];
+                    // Используем остаток от деления для палитры (до 10 цветов)
+                    cell.className = `cell color-${region % 10}`;
+                    
+                    cell.addEventListener('mousedown', (e) => handleTouch(r, c, e));
+                    cell.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouch(r, c, e); }, {passive: false});
+                    
+                    boardEl.appendChild(cell);
+                }
+            }
+            updateBoardVisuals();
+        }
+
+        function handleTouch(r, c, e) {
+            const now = Date.now();
+            const isDouble = (lastTap.r === r && lastTap.c === c && now - lastTap.time < 300);
+            lastTap = { r, c, time: now };
+
+            if (isDouble) {
+                attemptPlaceCat(r, c);
+            } else {
+                toggleCross(r, c);
+            }
+        }
+
+        function toggleCross(r, c) {
+            const current = state.grid[r][c];
+            if (current === 0) {
+                state.grid[r][c] = 1; 
+                playHaptic(20);
+            } else if (current === 1) {
+                state.grid[r][c] = 0;
+                playHaptic(20);
+            }
+            updateBoardVisuals();
+        }
+
+        function attemptPlaceCat(r, c) {
+            if (state.grid[r][c] === 3) return;
+            
+            if (currentLevelData.solution[r][c] === 1) {
+                // Правильно (Пункт 1: крестики после установки кота выставляются сами)
+                state.grid[r][c] = 3;
+                state.placedCats++;
+                playHaptic(60);
+                
+                const points = Math.floor(Math.random() * 100) + 500;
+                addScore(points);
+                spawnFloatingText(r, c, `+${points}`);
+                spawnSparkles(r, c);
+                
+                // Убрано автозаполнение крестиков при открытии кота игроком
+                
+                updateBoardVisuals();
+                updateUI();
+                
+                if (state.placedCats === currentLevelData.size) {
+                    setTimeout(showWinScreen, 600);
+                }
+            } else {
+                // Ошибка
+                loseLife();
+                shakeCell(r, c);
+            }
+        }
+
+        function autoFillCrosses(r, c) {
+            const size = currentLevelData.size;
+            const region = currentLevelData.regions[r][c];
+
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    if (state.grid[i][j] === 3) continue; // Не трогаем котов
+                    
+                    // Логика: строка, столбец, регион, радиус соседей
+                    if (i === r || j === c || currentLevelData.regions[i][j] === region || 
+                       (Math.abs(i-r) <= 1 && Math.abs(j-c) <= 1)) {
+                        state.grid[i][j] = 2; // Авто-крестик
+                    }
+                }
+            }
+        }
+
+        // Подсказка: Лампа (Пункт 6) - отмечает крестами все невозможные поля вокруг УЖЕ открытых котов
+        function useBulbHint() {
+            if (state.hintsBulb <= 0) return;
+            state.hintsBulb--;
+            playHaptic(50);
+            
+            let marked = false;
+            // Проходимся по всем поставленным котам и перерисовываем крестики жестко
+            for (let r = 0; r < currentLevelData.size; r++) {
+                for (let c = 0; c < currentLevelData.size; c++) {
+                    if (state.grid[r][c] === 3) {
+                        autoFillCrosses(r, c);
+                        marked = true;
+                    }
+                }
+            }
+            
+            updateUI();
+            updateBoardVisuals();
+            
+            if(marked) {
+                showToast("Очевидные клетки заблокированы!");
+            }
+        }
+
+        // Подсказка: Кот (Пункт 2) - открывает 1 кота на поле
+        function useCatHint() {
+            if (state.hintsCat <= 0) return;
+            
+            // Найти кота, которого еще нет на поле
+            for (let r = 0; r < currentLevelData.size; r++) {
+                for (let c = 0; c < currentLevelData.size; c++) {
+                    if (currentLevelData.solution[r][c] === 1 && state.grid[r][c] !== 3) {
+                        state.hintsCat--;
+                        playHaptic(70);
+                        attemptPlaceCat(r, c);
+                        return;
+                    }
+                }
+            }
+        }
+
+        function updateBoardVisuals() {
+            const size = currentLevelData.size;
+            const cells = boardEl.children;
+            
+            for (let i = 0; i < size * size; i++) {
+                const r = Math.floor(i / size);
+                const c = i % size;
+                const cell = cells[i];
+                const val = state.grid[r][c];
+                
+                cell.innerHTML = '';
+                if (val === 1) {
+                    cell.innerHTML = SVGS.cross;
+                } else if (val === 2) {
+                    cell.innerHTML = SVGS.cross;
+                    cell.firstElementChild.classList.add('cross-auto');
+                } else if (val === 3) {
+                    cell.innerHTML = SVGS.cat;
+                }
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('level-display').textContent = state.levelIdx + 1;
+            document.getElementById('cat-progress').textContent = `${state.placedCats}/${currentLevelData.size}`;
+            document.getElementById('hints-cat-count').textContent = state.hintsCat;
+            document.getElementById('hints-bulb-count').textContent = state.hintsBulb;
+            
+            const livesCont = document.getElementById('lives-container');
+            livesCont.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                livesCont.innerHTML += (i < state.lives) ? SVGS.fish : SVGS.fishEmpty;
+            }
+        }
+
+        function loseLife() {
+            state.lives--;
+            playHaptic([60, 50, 60]); // Ошибка - сильная вибрация
+            if (state.lives <= 0) {
+                showToast("Мяу! Перезапуск...");
+                setTimeout(() => { initLevel(); }, 1000);
+            } else {
+                showToast("Мяу! Ошибка!");
+            }
+            updateUI();
+        }
+
+        function shakeCell(r, c) {
+            const index = r * currentLevelData.size + c;
+            const cell = boardEl.children[index];
+            cell.innerHTML = SVGS.cross;
+            cell.firstElementChild.style.stroke = '#E76F51';
+            cell.style.animation = 'shake 0.4s';
+            setTimeout(() => {
+                cell.style.animation = '';
+                updateBoardVisuals();
+            }, 400);
+        }
+
+        function addScore(points) {
+            let current = state.score;
+            state.score += points;
+            const display = document.getElementById('score-display');
+            
+            const interval = setInterval(() => {
+                if (current < state.score) {
+                    current += Math.ceil((state.score - current) / 4);
+                    display.textContent = current;
+                } else {
+                    display.textContent = state.score;
+                    clearInterval(interval);
+                }
+            }, 30);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2500);
+        }
+
+        function spawnFloatingText(r, c, text) {
+            const size = currentLevelData.size;
+            const cell = boardEl.children[r * size + c];
+            const rect = cell.getBoundingClientRect();
+            
+            const el = document.createElement('div');
+            el.textContent = text;
+            el.className = 'absolute font-black text-2xl text-[#E76F51] drop-shadow-md pointer-events-none transition-all duration-1000 ease-out z-50';
+            el.style.left = `${rect.left + rect.width/2}px`;
+            el.style.top = `${rect.top}px`;
+            el.style.transform = 'translate(-50%, -50%)';
+            el.style.textShadow = '0 2px 4px white, 0 -2px 4px white, 2px 0 4px white, -2px 0 4px white';
+            
+            document.getElementById('floating-texts').appendChild(el);
+            
+            requestAnimationFrame(() => {
+                el.style.top = `${rect.top - 60}px`;
+                el.style.opacity = '0';
+            });
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function spawnSparkles(r, c) {
+            const size = currentLevelData.size;
+            const cell = boardEl.children[r * size + c];
+            const rect = cell.getBoundingClientRect();
+            const container = document.getElementById('particles');
+            
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'absolute bg-white rounded-full';
+                p.style.width = Math.random() * 6 + 4 + 'px';
+                p.style.height = p.style.width;
+                p.style.left = (rect.left + rect.width/2) + 'px';
+                p.style.top = (rect.top + rect.height/2) + 'px';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 40 + 20;
+                const tx = Math.cos(angle) * dist;
+                const ty = Math.sin(angle) * dist;
+                
+                p.style.transition = 'all 0.6s cubic-bezier(0.1, 0.8, 0.3, 1)';
+                container.appendChild(p);
+                
+                requestAnimationFrame(() => {
+                    p.style.transform = `translate(${tx}px, ${ty}px) scale(0)`;
+                    p.style.opacity = '0';
+                });
+                setTimeout(() => p.remove(), 600);
+            }
+        }
+
+        function showWinScreen() {
+            createConfetti();
+            const modal = document.getElementById('complete-modal');
+            const content = document.getElementById('modal-content');
+            
+            document.getElementById('next-level-btn-text').textContent = state.levelIdx + 2;
+                
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-90');
+            content.classList.add('scale-100');
+        }
+
+        function nextLevel() {
+            const modal = document.getElementById('complete-modal');
+            const content = document.getElementById('modal-content');
+            
+            content.classList.remove('scale-100');
+            content.classList.add('scale-90');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            
+            state.levelIdx++;
+            setTimeout(initLevel, 400);
+        }
+
+        function createConfetti() {
+            const colors = ['#3EB1C8', '#F6A8E0', '#FCE182', '#E76F51', '#9A8BDE', '#FFF'];
+            const container = document.getElementById('particles');
+            
+            for (let i = 0; i < 150; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'absolute rounded-sm';
+                conf.style.width = Math.random() * 10 + 6 + 'px';
+                conf.style.height = Math.random() * 16 + 8 + 'px';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.top = -20 + 'px';
+                
+                const duration = Math.random() * 3 + 2;
+                const delay = Math.random() * 1;
+                
+                conf.style.transition = `top ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform ${duration}s linear`;
+                container.appendChild(conf);
+                
+                setTimeout(() => {
+                    conf.style.top = '110vh';
+                    conf.style.transform = `rotate(${Math.random() * 1080}deg) translateX(${Math.random() * 200 - 100}px)`;
+                }, 50 + delay * 1000);
+                
+                setTimeout(() => conf.remove(), (duration + delay) * 1000 + 200);
+            }
+        }
+
+        // --- МАРШРУТИЗАЦИЯ И НАСТРОЙКИ ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        function startGame() {
+            switchView('game-view');
+            playHaptic(40);
+            initLevel();
+        }
+
+        function goToMenu() {
+            switchView('main-menu');
+            playHaptic(30);
+        }
+
+        function openSettings() {
+            playHaptic(30);
+            const modal = document.getElementById('settings-modal');
+            const content = document.getElementById('settings-content');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
+
+        function closeSettings() {
+            const modal = document.getElementById('settings-modal');
+            const content = document.getElementById('settings-content');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function devLoadLevel() {
+            const input = document.getElementById('dev-level-input');
+            const lvl = parseInt(input.value);
+            if (!isNaN(lvl) && lvl > 0) {
+                state.levelIdx = lvl - 1;
+                closeSettings();
+                switchView('game-view');
+                initLevel();
+            } else {
+                showToast("Неверный номер уровня");
+            }
+        }
+
+        // Привязка настроек к переменным (Пункт 4)
+        document.getElementById('setting-sound').addEventListener('change', (e) => state.settings.sound = e.target.checked);
+        document.getElementById('setting-music').addEventListener('change', (e) => state.settings.music = e.target.checked);
+        document.getElementById('setting-vibro').addEventListener('change', (e) => state.settings.vibration = e.target.checked);
+
+        // Инициализация при старте (показываем меню)
+        switchView('main-menu');
+
+    </script>
+</body>
+</html>
