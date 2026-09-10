@@ -2,18 +2,31 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Meowdoku - Логическая игра</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;900&display=swap');
         
-        body {
+        :root {
+            --sat: env(safe-area-inset-top, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+            --cat-bg-x: 0%;
+            --cat-bg-y: 0%;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             font-family: 'Nunito', sans-serif;
             background-color: #FAF7F2;
             color: #6C5446;
-            touch-action: manipulation;
+            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
             overflow: hidden;
@@ -24,25 +37,43 @@
             display: none;
             flex-direction: column;
             width: 100%;
-            height: 100vh;
+            height: 100dvh;
             position: absolute;
             top: 0;
             left: 0;
+            padding-top: var(--sat);
+            padding-right: var(--sar);
+            padding-bottom: var(--sab);
+            padding-left: var(--sal);
+            box-sizing: border-box;
         }
         .view-section.active {
             display: flex;
         }
 
         /* Игровое поле */
+        .game-board-container {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            container-type: size;
+            padding: 4px;
+            box-sizing: border-box;
+        }
+
         .game-board {
             display: grid;
-            gap: 4px;
-            padding: 6px;
+            gap: clamp(2px, 1cqi, 6px);
+            padding: clamp(4px, 2cqi, 8px);
             background-color: white;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             width: 100%;
-            max-width: 450px;
+            max-width: min(100cqw - 8px, 100cqh - 8px, 450px);
+            aspect-ratio: 1 / 1;
             margin: 0 auto;
         }
 
@@ -72,13 +103,25 @@
         .color-9 { background-color: #BCAAA4; } /* Brown */
 
         /* Иконки на поле */
-        .cat-icon {
+        .cat-sprite-container {
             width: 90%;
             height: 90%;
+            position: relative;
+            overflow: hidden;
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
             z-index: 10;
         }
+        
+        .cat-sprite {
+            width: 100%;
+            height: 100%;
+            background-image: url('cat_spritesheet.png'); /* Путь к вашему спрайту 1254x1254 */
+            background-size: 400% 500%; /* 4 колонки, 5 строк */
+            background-position: var(--cat-bg-x) var(--cat-bg-y);
+            background-repeat: no-repeat;
+        }
+
         .cross-icon {
             width: 75%;
             height: 75%;
@@ -105,15 +148,24 @@
         }
 
         /* Обновленные рамки с правилами (Пункт 9) */
+        .rules-container {
+            display: flex;
+            width: 100%;
+            gap: 4px;
+            padding: 0 4px;
+            max-width: 450px;
+            margin: 0 auto;
+            justify-content: space-between;
+        }
         .rule-card {
             background: linear-gradient(145deg, #ffffff, #fcf8f5);
             border: 2px solid #F2E3D5;
-            border-radius: 12px;
-            padding: 8px 6px;
+            border-radius: clamp(6px, 2vw, 12px);
+            padding: clamp(4px, 1vw, 8px) clamp(2px, 1vw, 6px);
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.6rem;
+            gap: clamp(2px, 1vw, 6px);
+            font-size: clamp(0.5rem, 2.5vw, 0.65rem);
             font-weight: 800;
             color: #7D6B5D;
             box-shadow: 0 4px 8px rgba(108, 84, 70, 0.05);
@@ -139,8 +191,8 @@
 
         /* Кнопки инструментов */
         .action-btn {
-            width: 70px;
-            height: 70px;
+            width: clamp(55px, 15vmin, 70px);
+            height: clamp(55px, 15vmin, 70px);
             border-radius: 50%;
             background-color: white;
             box-shadow: 0 6px 16px rgba(0,0,0,0.08);
@@ -220,6 +272,12 @@
             background: rgba(40, 30, 20, 0.85);
             backdrop-filter: blur(8px);
             z-index: 100;
+            padding: var(--sat) var(--sar) var(--sab) var(--sal);
+            box-sizing: border-box;
+        }
+        #settings-content, #modal-content {
+            max-height: 90dvh;
+            overflow-y: auto;
         }
         #particles, #floating-texts {
             pointer-events: none;
@@ -319,31 +377,31 @@
     </div>
 
     <!-- ИГРОВОЙ ЭКРАН -->
-    <div id="game-view" class="view-section overflow-y-auto pb-10">
+    <div id="game-view" class="view-section">
         <!-- Шапка -->
-        <header class="px-5 py-4 flex items-center justify-between sticky top-0 bg-[#FAF7F2] z-40">
-            <button onclick="goToMenu()" class="w-12 h-12 rounded-full flex items-center justify-center text-[#B5A496] bg-white shadow-sm hover:bg-gray-50 active:scale-90 transition">
-                <i class="fa fa-arrow-left text-xl"></i>
+        <header class="px-4 py-2 sm:px-5 sm:py-3 flex items-center justify-between z-40 shrink-0">
+            <button onclick="goToMenu()" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-[#B5A496] bg-white shadow-sm hover:bg-gray-50 active:scale-90 transition">
+                <i class="fa fa-arrow-left sm:text-xl"></i>
             </button>
-            <div class="flex gap-10 text-center">
+            <div class="flex gap-6 sm:gap-10 text-center">
                 <div>
-                    <div class="text-[0.65rem] font-black uppercase tracking-widest text-[#B5A496]">Уровень</div>
-                    <div class="text-2xl font-black text-[#6C5446] leading-none mt-1" id="level-display">1</div>
+                    <div class="text-[0.55rem] sm:text-[0.65rem] font-black uppercase tracking-widest text-[#B5A496]">Уровень</div>
+                    <div class="text-xl sm:text-2xl font-black text-[#6C5446] leading-none mt-1" id="level-display">1</div>
                 </div>
                 <div>
-                    <div class="text-[0.65rem] font-black uppercase tracking-widest text-[#B5A496]">Очки</div>
-                    <div class="text-2xl font-black text-[#6C5446] leading-none mt-1" id="score-display">0</div>
+                    <div class="text-[0.55rem] sm:text-[0.65rem] font-black uppercase tracking-widest text-[#B5A496]">Очки</div>
+                    <div class="text-xl sm:text-2xl font-black text-[#6C5446] leading-none mt-1" id="score-display">0</div>
                 </div>
             </div>
-            <button onclick="openSettings()" class="w-12 h-12 rounded-full flex items-center justify-center text-[#B5A496] relative bg-white shadow-sm hover:bg-gray-50 active:scale-90 transition">
-                <i class="fa fa-cog text-xl"></i>
+            <button onclick="openSettings()" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-[#B5A496] relative bg-white shadow-sm hover:bg-gray-50 active:scale-90 transition">
+                <i class="fa fa-cog sm:text-xl"></i>
             </button>
         </header>
 
-        <div class="px-4 mb-4 flex flex-col items-center gap-4">
-            <div class="flex items-center gap-6 w-full justify-center">
+        <div class="px-2 mb-2 flex flex-col items-center gap-2 shrink-0">
+            <div class="flex items-center gap-4 sm:gap-6 w-full justify-center">
                 <!-- Прогресс котов -->
-                <div class="bg-white rounded-full px-5 py-2 shadow-sm flex items-center gap-2 font-black text-xl text-[#2E7D32]">
+                <div class="bg-white rounded-full px-3 py-1.5 sm:px-5 sm:py-2 shadow-sm flex items-center gap-2 font-black text-lg sm:text-xl text-[#2E7D32]">
                     <svg width="28" height="28" viewBox="0 0 100 100" class="drop-shadow-sm">
                         <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
                         <path d="M50,95 C20,95 5,75 10,45 C15,20 30,15 50,15 C70,15 85,20 90,45 C95,75 80,95 50,95 Z" fill="#333"/>
@@ -355,11 +413,11 @@
                     <span id="cat-progress">0/4</span>
                 </div>
                 <!-- Жизни -->
-                <div class="flex gap-1.5" id="lives-container"></div>
+                <div class="flex gap-1 sm:gap-1.5" id="lives-container"></div>
             </div>
 
             <!-- Правила (Пункт 9) -->
-            <div class="flex w-full gap-2 px-1 max-w-[450px] mx-auto">
+            <div class="rules-container">
                 <div class="rule-card">
                     <div class="rule-icon">
                         <div style="background:#F6A8E0"><span class="text-[8px] opacity-40">X</span></div><div style="background:#FCE182"><span class="text-[8px] opacity-40">X</span></div><div style="background:#FCE182"><span class="text-[8px] opacity-40">X</span></div>
@@ -387,28 +445,14 @@
             </div>
         </div>
 
-        <main class="flex flex-col items-center justify-center p-4">
+        <main class="game-board-container">
             <div id="board" class="game-board">
                 <!-- Клетки генерируются JS -->
             </div>
         </main>
 
         <!-- Инструменты -->
-        <footer class="p-6 pb-8 flex justify-center gap-12 mt-auto">
-            <!-- Кнопка Подсказка-Кот (Пункт 2 - 100 шт) -->
-            <button class="action-btn" onclick="useCatHint()">
-                <svg viewBox="0 0 100 100" class="w-[60%] h-[60%]">
-                    <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
-                    <path d="M50,95 C20,95 5,75 10,45 C15,20 30,15 50,15 C70,15 85,20 90,45 C95,75 80,95 50,95 Z" fill="#333"/>
-                    <path d="M50,45 C35,45 25,60 25,75 C25,85 35,95 50,95 C65,95 75,85 75,75 C75,60 65,45 50,45 Z" fill="#FFF"/>
-                    <circle cx="35" cy="55" r="8" fill="#4CAF50"/><circle cx="65" cy="55" r="8" fill="#4CAF50"/>
-                    <circle cx="35" cy="55" r="4" fill="#000"/><circle cx="65" cy="55" r="4" fill="#000"/>
-                    <path d="M47,68 L53,68 L50,72 Z" fill="#F6A8E0"/>
-                    <path d="M38,75 Q50,85 62,75" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
-                </svg>
-                <div class="badge" id="hints-cat-count">100</div>
-            </button>
-            
+        <footer class="p-4 sm:p-6 pb-6 sm:pb-8 flex justify-center gap-12 shrink-0">
             <!-- Кнопка Подсказки-Лампы (Пункт 6 - 100 шт) -->
             <button class="action-btn" onclick="useBulbHint()">
                 <svg viewBox="0 0 24 24" class="w-[50%] h-[50%]" fill="none" stroke="#F4A261" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -469,15 +513,7 @@
         ];
 
         const SVGS = {
-            cat: `<svg viewBox="0 0 100 100" class="cat-icon">
-                    <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
-                    <path d="M50,95 C20,95 5,75 10,45 C15,20 30,15 50,15 C70,15 85,20 90,45 C95,75 80,95 50,95 Z" fill="#333"/>
-                    <path d="M50,45 C35,45 25,60 25,75 C25,85 35,95 50,95 C65,95 75,85 75,75 C75,60 65,45 50,45 Z" fill="#FFF"/>
-                    <circle cx="35" cy="55" r="8" fill="#4CAF50"/><circle cx="65" cy="55" r="8" fill="#4CAF50"/>
-                    <circle cx="35" cy="55" r="4" fill="#000"/><circle cx="65" cy="55" r="4" fill="#000"/>
-                    <path d="M47,68 L53,68 L50,72 Z" fill="#F6A8E0"/>
-                    <path d="M38,75 Q50,85 62,75" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
-                  </svg>`,
+            cat: `<div class="cat-sprite-container"><div class="cat-sprite"></div></div>`,
             cross: `<svg viewBox="0 0 24 24" class="cross-icon" fill="none" stroke="currentColor">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -511,18 +547,106 @@
             return getRandomInt(5, 10);
         }
 
+        // Логический решатель для проверки однозначности (никакого угадывания)
+        function isLogicallySolvable(size, regions, revealedCat) {
+            let grid = Array(size).fill(0).map(()=>Array(size).fill(-1));
+            let changed = true;
+
+            // Внутренняя функция логической установки кота (с автоблокировкой соседей)
+            function placeCatLogical(r, c) {
+                if (grid[r][c] === 0 || grid[r][c] === 1) return false;
+                grid[r][c] = 1;
+                // Блокируем строку и столбец
+                for(let i=0; i<size; i++) {
+                    if(i!==c && grid[r][i] === -1) grid[r][i] = 0;
+                    if(i!==r && grid[i][c] === -1) grid[i][c] = 0;
+                }
+                // Блокируем соседей по диагонали
+                for(let dr=-1; dr<=1; dr++) {
+                    for(let dc=-1; dc<=1; dc++) {
+                        let nr=r+dr, nc=c+dc;
+                        if(nr>=0 && nr<size && nc>=0 && nc<size && grid[nr][nc] === -1) grid[nr][nc] = 0;
+                    }
+                }
+                return true;
+            }
+
+            // Ставим стартового кота
+            placeCatLogical(revealedCat.r, revealedCat.c);
+
+            // Цикл поиска логических решений методом исключения
+            while(changed) {
+                changed = false;
+                
+                // Проверка: единственное место в строке или столбце
+                for(let i=0; i<size; i++) {
+                    let possibleCols = [], possibleRows = [];
+                    for(let j=0; j<size; j++) {
+                        if(grid[i][j] === -1) possibleCols.push(j);
+                        if(grid[j][i] === -1) possibleRows.push(j);
+                    }
+                    if(possibleCols.length === 1) { if(placeCatLogical(i, possibleCols[0])) changed = true; }
+                    if(possibleRows.length === 1) { if(placeCatLogical(possibleRows[0], i)) changed = true; }
+                }
+                
+                // Проверка: единственное место в цветовой зоне
+                for(let reg=0; reg<size; reg++) {
+                    let possible = [];
+                    for(let r=0; r<size; r++) {
+                        for(let c=0; c<size; c++) {
+                            if(regions[r][c] === reg && grid[r][c] === -1) possible.push({r,c});
+                        }
+                    }
+                    if(possible.length === 1) {
+                        if(placeCatLogical(possible[0].r, possible[0].c)) changed = true;
+                    }
+                    
+                    // Продвинутая логика: все доступные клетки зоны лежат на одной линии
+                    if(possible.length > 1) {
+                        let sameRow = true, sameCol = true;
+                        let row = possible[0].r, col = possible[0].c;
+                        for(let p of possible) {
+                            if(p.r !== row) sameRow = false;
+                            if(p.c !== col) sameCol = false;
+                        }
+                        if(sameRow) {
+                            for(let c=0; c<size; c++) {
+                                if(regions[row][c] !== reg && grid[row][c] === -1) { grid[row][c] = 0; changed = true; }
+                            }
+                        }
+                        if(sameCol) {
+                            for(let r=0; r<size; r++) {
+                                if(regions[r][col] !== reg && grid[r][col] === -1) { grid[r][col] = 0; changed = true; }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Если все коты найдены логически, уровень идеален
+            let catsFound = 0;
+            for(let r=0; r<size; r++) for(let c=0; c<size; c++) if(grid[r][c]===1) catsFound++;
+            return catsFound === size;
+        }
+
         function generateStarBattle(size) {
             // Пытаемся сгенерировать поле с правильными котами и регионами
-            for(let attempt = 0; attempt < 100; attempt++) {
+            for(let attempt = 0; attempt < 300; attempt++) {
                 let solution = generateCatPlacement(size);
                 if (!solution) continue;
                 
                 let regions = generateRegions(size, solution);
                 if (!regions) continue;
                 
-                // В браузере полный DFS-поиск уникальности для 10x10 может занять время.
-                // Применим упрощенный генератор. Гарантируем, что сгенерированное решение - рабочее.
-                return { size, solution, regions };
+                // Выбираем стартового кота
+                let cats = [];
+                for(let r=0; r<size; r++) for(let c=0; c<size; c++) if(solution[r][c] === 1) cats.push({r,c});
+                let revealedCat = cats[Math.floor(Math.random() * cats.length)];
+
+                // Проверяем на однозначность решения
+                if (isLogicallySolvable(size, regions, revealedCat)) {
+                    return { size, solution, regions };
+                }
             }
             // Фолбэк, если генератор застрял
             let fallbackSol = Array(size).fill(0).map((_, i) => {
@@ -747,40 +871,17 @@
             state.hintsBulb--;
             playHaptic(50);
             
-            let marked = false;
             // Проходимся по всем поставленным котам и перерисовываем крестики жестко
             for (let r = 0; r < currentLevelData.size; r++) {
                 for (let c = 0; c < currentLevelData.size; c++) {
                     if (state.grid[r][c] === 3) {
                         autoFillCrosses(r, c);
-                        marked = true;
                     }
                 }
             }
             
             updateUI();
             updateBoardVisuals();
-            
-            if(marked) {
-                showToast("Очевидные клетки заблокированы!");
-            }
-        }
-
-        // Подсказка: Кот (Пункт 2) - открывает 1 кота на поле
-        function useCatHint() {
-            if (state.hintsCat <= 0) return;
-            
-            // Найти кота, которого еще нет на поле
-            for (let r = 0; r < currentLevelData.size; r++) {
-                for (let c = 0; c < currentLevelData.size; c++) {
-                    if (currentLevelData.solution[r][c] === 1 && state.grid[r][c] !== 3) {
-                        state.hintsCat--;
-                        playHaptic(70);
-                        attemptPlaceCat(r, c);
-                        return;
-                    }
-                }
-            }
         }
 
         function updateBoardVisuals() {
@@ -808,8 +909,9 @@
         function updateUI() {
             document.getElementById('level-display').textContent = state.levelIdx + 1;
             document.getElementById('cat-progress').textContent = `${state.placedCats}/${currentLevelData.size}`;
-            document.getElementById('hints-cat-count').textContent = state.hintsCat;
-            document.getElementById('hints-bulb-count').textContent = state.hintsBulb;
+            
+            const bulbEl = document.getElementById('hints-bulb-count');
+            if (bulbEl) bulbEl.textContent = state.hintsBulb;
             
             const livesCont = document.getElementById('lives-container');
             livesCont.innerHTML = '';
@@ -1021,6 +1123,37 @@
         document.getElementById('setting-sound').addEventListener('change', (e) => state.settings.sound = e.target.checked);
         document.getElementById('setting-music').addEventListener('change', (e) => state.settings.music = e.target.checked);
         document.getElementById('setting-vibro').addEventListener('change', (e) => state.settings.vibration = e.target.checked);
+
+        // --- АНИМАЦИЯ КОТА ИЗ SPRITESHEET ---
+        const catFrameTimes = [
+            500, 500, 500, 500,   // Медленное покачивание (1-4 кадры)
+             90,  80,  90, 180,   // Моргание (5-8)
+            500, 500, 500, 500,   // Медленное покачивание (9-12)
+            500, 500, 500, 500,   // Медленное покачивание (13-16)
+            500, 200,  90, 180    // Второе моргание (17-20)
+        ];
+        let currentCatFrame = 0;
+
+        function animateCats() {
+            const time = catFrameTimes[currentCatFrame];
+            const col = currentCatFrame % 4;
+            const row = Math.floor(currentCatFrame / 4);
+            
+            // Сдвиг background-position в процентах
+            // 4 колонки: шаги по 33.333% (100 / 3)
+            // 5 строк: шаги по 25% (100 / 4)
+            const posX = col * (100 / 3);
+            const posY = row * (100 / 4);
+            
+            document.documentElement.style.setProperty('--cat-bg-x', `${posX}%`);
+            document.documentElement.style.setProperty('--cat-bg-y', `${posY}%`);
+
+            currentCatFrame = (currentCatFrame + 1) % 20;
+            setTimeout(animateCats, time);
+        }
+        
+        // Запуск глобального цикла анимации
+        animateCats();
 
         // Инициализация при старте (показываем меню)
         switchView('main-menu');
