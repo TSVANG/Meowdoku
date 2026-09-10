@@ -59,7 +59,7 @@
         
         .cell:active { transform: scale(0.92); }
 
-        /* Палитра цветов для бесконечных уровней (до 10 зон) */
+        /* Палитра цветов (до 10 зон) */
         .color-0 { background-color: #3EB1C8; } /* Cyan */
         .color-1 { background-color: #F6A8E0; } /* Pink */
         .color-2 { background-color: #FCE182; } /* Yellow */
@@ -71,12 +71,7 @@
         .color-8 { background-color: #5C6BC0; } /* Indigo */
         .color-9 { background-color: #BCAAA4; } /* Brown */
 
-        :root {
-            --cat-bg-x: 0%;
-            --cat-bg-y: 0%;
-        }
-
-        /* Иконки на поле */
+        /* Аппаратная анимация для кота 8x8 (64 кадра) */
         .cat-sprite-container {
             width: 90%;
             height: 90%;
@@ -90,11 +85,12 @@
         .cat-sprite {
             width: 100%;
             height: 100%;
-            background-image: url('cat_spritesheet.png'); 
-            /* 8x8 сетка = 800% ширина и 800% высота */
+            background-image: url('cat_spritesheet.png');
+            /* Сетка 8x8 кадров = 800% ширина и высота */
             background-size: 800% 800%; 
-            background-position: var(--cat-bg-x) var(--cat-bg-y);
             background-repeat: no-repeat;
+            /* Анимация генерируется динамически в JS (64 кадра GPU) */
+            animation: playCat 3s infinite step-end; 
         }
 
         .cross-icon {
@@ -122,7 +118,7 @@
             75% { transform: translateX(4px); }
         }
 
-        /* Обновленные рамки с правилами (Пункт 9) */
+        /* Правила: Увеличенный шрифт (Пункт 2 из прошлых правок) */
         .rule-card {
             background: linear-gradient(145deg, #ffffff, #fcf8f5);
             border: 2px solid #F2E3D5;
@@ -131,19 +127,18 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            /* Увеличенный шрифт подсказок (было 0.6rem, стало 0.7rem) */
-            font-size: 0.7rem; 
+            font-size: 0.75rem; /* Шрифт увеличен */
             font-weight: 800;
             color: #7D6B5D;
             box-shadow: 0 4px 8px rgba(108, 84, 70, 0.05);
             flex: 1;
-            line-height: 1.1;
+            line-height: 1.15;
             transition: transform 0.2s;
         }
         .rule-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(108, 84, 70, 0.08); }
         .rule-icon {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
             flex-shrink: 0;
             border-radius: 6px;
             overflow: hidden;
@@ -156,7 +151,6 @@
         }
         .rule-icon > div { background-color: #FAF7F2; display: flex; align-items: center; justify-content: center; }
 
-        /* Кнопки инструментов */
         .action-btn {
             width: 70px;
             height: 70px;
@@ -171,7 +165,7 @@
             border: 4px solid transparent;
         }
         .action-btn:active { transform: scale(0.92); }
-        
+
         .badge {
             position: absolute;
             top: -4px;
@@ -191,16 +185,9 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        /* Переключатели в настройках */
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #68D391;
-        }
-        .toggle-checkbox:checked + .toggle-label .dot {
-            transform: translateX(1.5rem);
-        }
-        .toggle-checkbox {
-            display: none;
-        }
+        .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
+        .toggle-checkbox:checked + .toggle-label .dot { transform: translateX(1.5rem); }
+        .toggle-checkbox { display: none; }
         .toggle-label {
             width: 3rem;
             height: 1.5rem;
@@ -229,7 +216,6 @@
             border-bottom: 1px solid #f0e6df;
         }
 
-        /* Модальные окна и эффекты */
         .modal-overlay {
             background: rgba(40, 30, 20, 0.85);
             backdrop-filter: blur(8px);
@@ -270,7 +256,6 @@
 </head>
 <body class="bg-[#FAF7F2]">
 
-    <!-- ГЛАВНОЕ МЕНЮ -->
     <div id="main-menu" class="view-section active justify-center items-center px-6">
         <div class="text-9xl mb-4 logo-cat filter drop-shadow-lg">😸</div>
         <h1 class="text-5xl font-black text-[#6C5446] mb-2 tracking-wide text-center">Meowdoku</h1>
@@ -284,7 +269,6 @@
         </button>
     </div>
 
-    <!-- ОКНО НАСТРОЕК -->
     <div id="settings-modal" class="fixed inset-0 modal-overlay flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-white rounded-3xl p-6 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-300" id="settings-content">
             <div class="flex justify-between items-center mb-6">
@@ -331,7 +315,6 @@
         </div>
     </div>
 
-    <!-- ИГРОВОЙ ЭКРАН -->
     <div id="game-view" class="view-section overflow-y-auto pb-10">
         <!-- Шапка -->
         <header class="px-5 py-4 flex items-center justify-between sticky top-0 bg-[#FAF7F2] z-40">
@@ -355,7 +338,6 @@
 
         <div class="px-4 mb-4 flex flex-col items-center gap-4">
             <div class="flex items-center gap-6 w-full justify-center">
-                <!-- Прогресс котов -->
                 <div class="bg-white rounded-full px-5 py-2 shadow-sm flex items-center gap-2 font-black text-xl text-[#2E7D32]">
                     <svg width="28" height="28" viewBox="0 0 100 100" class="drop-shadow-sm">
                         <path d="M10,40 L15,10 L40,25 Z M90,40 L85,10 L60,25 Z" fill="#333"/>
@@ -367,7 +349,6 @@
                     </svg>
                     <span id="cat-progress">0/4</span>
                 </div>
-                <!-- Жизни -->
                 <div class="flex gap-1.5" id="lives-container"></div>
             </div>
 
@@ -387,7 +368,7 @@
                         <div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div>
                         <div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div><div><span class="text-[8px] opacity-40">X</span></div>
                     </div>
-                    <span>1 кошка на<br>ряд/столбец</span>
+                    <span>1 кошка на<br>ряд/столб</span>
                 </div>
                 <div class="rule-card">
                     <div class="rule-icon">
@@ -406,7 +387,6 @@
             </div>
         </main>
 
-        <!-- Инструменты -->
         <footer class="p-6 pb-8 flex justify-center gap-12 mt-auto">
             <button class="action-btn" onclick="useCatHint()">
                 <svg viewBox="0 0 100 100" class="w-[60%] h-[60%]">
@@ -449,7 +429,25 @@
     <div id="particles"></div>
 
     <script>
-        // --- СОСТОЯНИЕ И НАСТРОЙКИ ---
+        // --- ДИНАМИЧЕСКАЯ ГЕНЕРАЦИЯ АНИМАЦИИ (64 кадра, GPU ускорение) ---
+        const styleSheetAnim = document.createElement('style');
+        let keyframes = `@keyframes playCat {\n`;
+        const totalFrames = 64; 
+        for (let i = 0; i <= totalFrames; i++) {
+            let frame = i === totalFrames ? 0 : i;
+            let col = frame % 8;
+            let row = Math.floor(frame / 8);
+            // 8 колонок -> шаг 100/7 = 14.2857%
+            // 8 строк -> шаг 100/7 = 14.2857%
+            let posX = col * (100 / 7);
+            let posY = row * (100 / 7);
+            let percent = (i / totalFrames) * 100;
+            keyframes += `  ${percent.toFixed(2)}% { background-position: ${posX.toFixed(4)}% ${posY.toFixed(4)}%; }\n`;
+        }
+        keyframes += `}`;
+        styleSheetAnim.innerHTML = keyframes;
+        document.head.appendChild(styleSheetAnim);
+
         const state = {
             levelIdx: 0,
             score: 0,
@@ -458,156 +456,159 @@
             hintsBulb: 100,
             grid: [], // 0: пусто, 1: крестик юзера, 2: крестик авто, 3: кот
             placedCats: 0,
-            settings: {
-                sound: true,
-                music: true,
-                vibration: true
-            }
+            settings: { sound: true, music: true, vibration: true }
         };
 
-        // Хардкод первых двух уровней
         const STORED_LEVELS = [
-            { // Уровень 1 (4x4)
-                size: 4,
-                regions: [[0, 1, 2, 2], [0, 2, 2, 3], [0, 0, 2, 3], [0, 2, 2, 2]],
-                solution: [[0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0]]
-            },
-            { // Уровень 2 (5x5)
-                size: 5,
-                regions: [[1, 1, 1, 2, 3], [1, 1, 4, 2, 3], [1, 1, 2, 2, 2], [1, 2, 2, 2, 2], [5, 5, 5, 5, 5]],
-                solution: [[0, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 1, 0, 0, 0]]
-            }
+            { size: 4, regions: [[0, 1, 2, 2], [0, 2, 2, 3], [0, 0, 2, 3], [0, 2, 2, 2]], solution: [[0, 1, 0, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 0, 1, 0]], startCat: {r: 2, c: 0} },
+            { size: 5, regions: [[1, 1, 1, 2, 3], [1, 1, 4, 2, 3], [1, 1, 2, 2, 2], [1, 2, 2, 2, 2], [5, 5, 5, 5, 5]], solution: [[0, 0, 0, 0, 1], [0, 0, 1, 0, 0], [1, 0, 0, 0, 0], [0, 0, 0, 1, 0], [0, 1, 0, 0, 0]], startCat: {r: 0, c: 4} }
         ];
 
         const SVGS = {
             cat: `<div class="cat-sprite-container"><div class="cat-sprite"></div></div>`,
-            cross: `<svg viewBox="0 0 24 24" class="cross-icon" fill="none" stroke="currentColor">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>`,
-            fish: `<svg width="28" height="28" viewBox="0 0 24 24" fill="#FFC107" class="drop-shadow-sm"><path d="M20 7C17.2 7 15 9.2 15 12C15 14.8 17.2 17 20 17L22 12L20 7ZM2 12C2 15.3 4.7 18 8 18H10C10 18 14 16 14 12C14 8 10 6 10 6H8C4.7 6 2 8.7 2 12ZM8 10C9.1 10 10 10.9 10 12C10 13.1 9.1 14 8 14C6.9 14 6 12C6 10.9 6.9 10 8 10Z"/></svg>`,
-            fishEmpty: `<svg width="28" height="28" viewBox="0 0 24 24" fill="#D7CCC8"><path d="M20 7C17.2 7 15 9.2 15 12C15 14.8 17.2 17 20 17L22 12L20 7ZM2 12C2 15.3 4.7 18 8 18H10C10 18 14 16 14 12C14 8 10 6 10 6H8C4.7 6 2 8.7 2 12ZM8 10C9.1 10 10 10.9 10 12C10 13.1 9.1 14 8 14C6.9 14 6 12C6 10.9 6.9 10 8 10Z"/></svg>`
+            cross: `<svg viewBox="0 0 24 24" class="cross-icon" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+            fish: `<svg width="28" height="28" viewBox="0 0 24 24" fill="#FFC107" class="drop-shadow-sm"><path d="M20 7C17.2 7 15 9.2 15 12C15 14.8 17.2 17 20 17L22 12L20 7ZM2 12C2 15.3 4.7 18 8 18H10C10 18 14 16 14 12C14 8 10 6 10 6H8C4.7 6 2 8.7 2 12ZM8 10C9.1 10 10 10.9 10 12C10 13.1 9.1 14 8 14C6.9 14 6 13.1 6 12C6 10.9 6.9 10 8 10Z"/></svg>`,
+            fishEmpty: `<svg width="28" height="28" viewBox="0 0 24 24" fill="#D7CCC8"><path d="M20 7C17.2 7 15 9.2 15 12C15 14.8 17.2 17 20 17L22 12L20 7ZM2 12C2 15.3 4.7 18 8 18H10C10 18 14 16 14 12C14 8 10 6 10 6H8C4.7 6 2 8.7 2 12ZM8 10C9.1 10 10 10.9 10 12C10 13.1 9.1 14 8 14C6.9 14 6 13.1 6 12C6 10.9 6.9 10 8 10Z"/></svg>`
         };
 
         const boardEl = document.getElementById('board');
         let currentLevelData = null;
         let lastTap = { r: -1, c: -1, time: 0 };
 
-        function playHaptic(ms = 40) {
-            if (state.settings.vibration && navigator.vibrate) navigator.vibrate(ms);
-        }
-
-        function getRandomInt(min, max) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-
+        function playHaptic(ms = 40) { if (state.settings.vibration && navigator.vibrate) navigator.vibrate(ms); }
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        
         function getLevelSize(lvlNum) {
-            if (lvlNum === 1) return 4;
-            if (lvlNum === 2) return 5;
-            if (lvlNum >= 3 && lvlNum <= 5) return getRandomInt(5, 6);
-            if (lvlNum >= 6 && lvlNum <= 8) return getRandomInt(5, 7);
-            if (lvlNum >= 9 && lvlNum <= 11) return getRandomInt(5, 8);
-            if (lvlNum >= 12 && lvlNum <= 13) return getRandomInt(6, 9);
-            if (lvlNum >= 14 && lvlNum <= 16) return getRandomInt(6, 10);
-            return getRandomInt(5, 10);
+            if (lvlNum <= 2) return lvlNum + 3; // Lvl 1=4, Lvl 2=5
+            if (lvlNum <= 5) return getRandomInt(5, 6);
+            if (lvlNum <= 8) return getRandomInt(5, 7);
+            if (lvlNum <= 11) return getRandomInt(6, 8);
+            if (lvlNum <= 16) return getRandomInt(6, 9);
+            return getRandomInt(7, 10);
         }
 
-        // Логический решатель
-        function isLogicallySolvable(size, regions, revealedCat) {
-            let grid = Array(size).fill(0).map(()=>Array(size).fill(-1));
-            let changed = true;
-
-            function placeCatLogical(r, c) {
-                if (grid[r][c] === 0 || grid[r][c] === 1) return false;
-                grid[r][c] = 1;
+        // --- HUMAN SOLVER (Строгая имитация игрока без solution) ---
+        function humanSolver(size, regions, revealedCat) {
+            // stateGrid: -1 = неизвестно, 0 = запрещено (крестик), 1 = кот
+            let stateGrid = Array(size).fill(0).map(()=>Array(size).fill(-1));
+            
+            // Внутренняя функция применения хода (кот) и ВСЕХ его последствий
+            function applyCat(r, c) {
+                if (stateGrid[r][c] === 0) return false; // противоречие (невозможно логически)
+                stateGrid[r][c] = 1;
+                const regId = regions[r][c];
+                
+                // Блокируем: строку, столбец, регион, радиус соседей
                 for(let i=0; i<size; i++) {
-                    if(i!==c && grid[r][i] === -1) grid[r][i] = 0;
-                    if(i!==r && grid[i][c] === -1) grid[i][c] = 0;
-                }
-                for(let dr=-1; dr<=1; dr++) {
-                    for(let dc=-1; dc<=1; dc++) {
-                        let nr=r+dr, nc=c+dc;
-                        if(nr>=0 && nr<size && nc>=0 && nc<size && grid[nr][nc] === -1) grid[nr][nc] = 0;
+                    for(let j=0; j<size; j++) {
+                        if (stateGrid[i][j] === -1) {
+                            if (i === r || j === c || regions[i][j] === regId || (Math.abs(i-r) <= 1 && Math.abs(j-c) <= 1)) {
+                                stateGrid[i][j] = 0; // ставим логический крестик
+                            }
+                        }
                     }
                 }
                 return true;
             }
 
-            placeCatLogical(revealedCat.r, revealedCat.c);
+            // ШАГ 0: Устанавливаем стартового кота
+            if (!applyCat(revealedCat.r, revealedCat.c)) return false;
 
-            while(changed) {
+            let changed = true;
+            // Главный цикл симуляции мышления
+            while (changed) {
                 changed = false;
-                
-                for(let i=0; i<size; i++) {
-                    let possibleCols = [], possibleRows = [];
-                    for(let j=0; j<size; j++) {
-                        if(grid[i][j] === -1) possibleCols.push(j);
-                        if(grid[j][i] === -1) possibleRows.push(j);
+
+                // Собираем группы: строки, столбцы, зоны
+                let groups = [];
+                for (let i = 0; i < size; i++) {
+                    let rowGroup = [], colGroup = [], regGroup = [];
+                    for (let j = 0; j < size; j++) {
+                        if (stateGrid[i][j] === -1) rowGroup.push({r: i, c: j});
+                        if (stateGrid[j][i] === -1) colGroup.push({r: j, c: i});
                     }
-                    if(possibleCols.length === 1) { if(placeCatLogical(i, possibleCols[0])) changed = true; }
-                    if(possibleRows.length === 1) { if(placeCatLogical(possibleRows[0], i)) changed = true; }
+                    for (let r = 0; r < size; r++) {
+                        for (let c = 0; c < size; c++) {
+                            if (regions[r][c] === i && stateGrid[r][c] === -1) regGroup.push({r, c});
+                        }
+                    }
+                    if (rowGroup.length > 0) groups.push(rowGroup);
+                    if (colGroup.length > 0) groups.push(colGroup);
+                    if (regGroup.length > 0) groups.push(regGroup);
                 }
-                
-                for(let reg=0; reg<size; reg++) {
-                    let possible = [];
-                    for(let r=0; r<size; r++) {
-                        for(let c=0; c<size; c++) {
-                            if(regions[r][c] === reg && grid[r][c] === -1) possible.push({r,c});
+
+                // ПРАВИЛО 1: Очевидный единственный ход
+                // Если в любой строке, столбце или зоне осталась ровно 1 пустая клетка, там 100% кот
+                for (let group of groups) {
+                    if (group.length === 1) {
+                        applyCat(group[0].r, group[0].c);
+                        changed = true;
+                    }
+                }
+                if (changed) continue; // Начинаем анализ заново с обновленными данными
+
+                // ПРАВИЛО 2: Продвинутое исключение (Пересечение невозможных / Common Blocked Cells)
+                // Если ВСЕ возможные варианты в группе блокируют определенную клетку X, то X точно запрещена.
+                for (let group of groups) {
+                    if (group.length === 0) continue;
+
+                    // Узнаем, какие клетки будут заблокированы, если кот встанет в (r, c)
+                    function getBlockedBy(r, c) {
+                        let blocked = new Set();
+                        let regId = regions[r][c];
+                        for (let i=0; i<size; i++) {
+                            for (let j=0; j<size; j++) {
+                                if (stateGrid[i][j] === -1) { // Анализируем только пока пустые
+                                    if (i === r || j === c || regions[i][j] === regId || (Math.abs(i-r) <= 1 && Math.abs(j-c) <= 1)) {
+                                        if (!(i === r && j === c)) {
+                                            blocked.add(`${i},${j}`);
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        return blocked;
                     }
-                    if(possible.length === 1) {
-                        if(placeCatLogical(possible[0].r, possible[0].c)) changed = true;
-                    }
+
+                    // Берем блокировки от первого кандидата
+                    let commonBlocked = getBlockedBy(group[0].r, group[0].c);
                     
-                    if(possible.length > 1) {
-                        let sameRow = true, sameCol = true;
-                        let row = possible[0].r, col = possible[0].c;
-                        for(let p of possible) {
-                            if(p.r !== row) sameRow = false;
-                            if(p.c !== col) sameCol = false;
+                    // Пересекаем с блокировками остальных кандидатов этой же группы
+                    for (let i = 1; i < group.length; i++) {
+                        let currentBlocked = getBlockedBy(group[i].r, group[i].c);
+                        let intersection = new Set();
+                        for (let cellKey of commonBlocked) {
+                            if (currentBlocked.has(cellKey)) intersection.add(cellKey);
                         }
-                        if(sameRow) {
-                            for(let c=0; c<size; c++) {
-                                if(regions[row][c] !== reg && grid[row][c] === -1) { grid[row][c] = 0; changed = true; }
-                            }
-                        }
-                        if(sameCol) {
-                            for(let r=0; r<size; r++) {
-                                if(regions[r][col] !== reg && grid[r][col] === -1) { grid[r][col] = 0; changed = true; }
+                        commonBlocked = intersection;
+                        if (commonBlocked.size === 0) break; // Оптимизация
+                    }
+
+                    // Если есть клетки, которые блокируются ПРИ ЛЮБОМ РАСКЛАДЕ в этой группе
+                    if (commonBlocked.size > 0) {
+                        for (let cellKey of commonBlocked) {
+                            let [br, bc] = cellKey.split(',').map(Number);
+                            if (stateGrid[br][bc] === -1) {
+                                stateGrid[br][bc] = 0; // Ставим гарантированный крестик
+                                changed = true;
                             }
                         }
                     }
+                    if (changed) break; // Если нашли крестики, прерываем цикл и начинаем анализ заново
+                }
+            }
+
+            // Симуляция завершена (не найдено новых ходов).
+            // Проверяем: смог ли игрок найти всех N котов?
+            let catsFound = 0;
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (stateGrid[r][c] === 1) catsFound++;
                 }
             }
             
-            let catsFound = 0;
-            for(let r=0; r<size; r++) for(let c=0; c<size; c++) if(grid[r][c]===1) catsFound++;
+            // Если найдено меньше котов, значит уровень угадайка. Возвращаем false.
             return catsFound === size;
-        }
-
-        function generateStarBattle(size) {
-            for(let attempt = 0; attempt < 300; attempt++) {
-                let solution = generateCatPlacement(size);
-                if (!solution) continue;
-                
-                let regions = generateRegions(size, solution);
-                if (!regions) continue;
-                
-                let cats = [];
-                for(let r=0; r<size; r++) for(let c=0; c<size; c++) if(solution[r][c] === 1) cats.push({r,c});
-                let revealedCat = cats[Math.floor(Math.random() * cats.length)];
-
-                if (isLogicallySolvable(size, regions, revealedCat)) {
-                    return { size, solution, regions };
-                }
-            }
-            let fallbackSol = Array(size).fill(0).map((_, i) => {
-                let r = Array(size).fill(0);
-                r[i] = 1;
-                return r; 
-            });
-            let fallbackReg = Array(size).fill(0).map((_, r) => Array(size).fill(r));
-            return { size, solution: fallbackSol, regions: fallbackReg };
         }
 
         function generateCatPlacement(N) {
@@ -658,7 +659,7 @@
             
             while(unassigned > 0) {
                 let activeRegions = edges.map((e, idx) => e.length > 0 ? idx : -1).filter(i => i !== -1);
-                if (activeRegions.length === 0) return null;
+                if (activeRegions.length === 0) return null; 
 
                 let totalWeight = activeRegions.reduce((sum, idx) => sum + weights[idx], 0);
                 let rand = Math.random() * totalWeight;
@@ -688,6 +689,43 @@
             return regions;
         }
 
+        function generateStarBattle(size) {
+            // До 5000 попыток, так как Human Solver очень требователен к логичности уровней
+            for (let attempt = 0; attempt < 5000; attempt++) {
+                let solution = generateCatPlacement(size);
+                if (!solution) continue;
+                
+                let regions = generateRegions(size, solution);
+                if (!regions) continue;
+                
+                let cats = [];
+                for(let r=0; r<size; r++) for(let c=0; c<size; c++) if(solution[r][c] === 1) cats.push({r,c});
+                
+                // Проверяем каждую кошку. Нам нужен уровень, который гарантированно
+                // проходится Human Solver-ом от хотя бы одной конкретной стартовой кошки.
+                let solvableCat = null;
+                cats.sort(() => Math.random() - 0.5); // Рандомизируем выбор стартовой
+                for (let cat of cats) {
+                    // Передаем в строгого симулятора
+                    if (humanSolver(size, regions, cat)) {
+                        solvableCat = cat;
+                        break;
+                    }
+                }
+
+                // Уровень ИДЕАЛЕН - никаких угадываний!
+                if (solvableCat) {
+                    return { size, solution, regions, startCat: solvableCat };
+                }
+            }
+            
+            // Если за 5000 попыток ничего не вышло (крайне маловероятно для 1-star battle), 
+            // фоллбэк: диагональ (решается всегда)
+            let fallbackSol = Array(size).fill(0).map((_, i) => { let r = Array(size).fill(0); r[i] = 1; return r; });
+            let fallbackReg = Array(size).fill(0).map((_, r) => Array(size).fill(r));
+            return { size, solution: fallbackSol, regions: fallbackReg, startCat: {r:0, c:0} };
+        }
+
         function getLevelData(idx) {
             if (idx < STORED_LEVELS.length) return STORED_LEVELS[idx];
             if (!STORED_LEVELS[idx]) {
@@ -703,6 +741,7 @@
             state.placedCats = 0;
             state.lives = 3;
             
+            // Инициализация именно той кошки, которая гарантирует логическое решение
             preFillRandomCat();
 
             updateUI();
@@ -710,14 +749,8 @@
         }
 
         function preFillRandomCat() {
-            let cats = [];
-            for (let r = 0; r < currentLevelData.size; r++) {
-                for (let c = 0; c < currentLevelData.size; c++) {
-                    if (currentLevelData.solution[r][c] === 1) cats.push({r, c});
-                }
-            }
-            let randCat = cats[Math.floor(Math.random() * cats.length)];
-            state.grid[randCat.r][randCat.c] = 3;
+            let startCat = currentLevelData.startCat;
+            state.grid[startCat.r][startCat.c] = 3;
             state.placedCats = 1;
         }
 
@@ -767,6 +800,8 @@
         function attemptPlaceCat(r, c) {
             if (state.grid[r][c] === 3) return;
             
+            // Обратите внимание: ИГРОК использует solution для проверки нажатий. 
+            // Human Solver его НЕ использовал для генерации.
             if (currentLevelData.solution[r][c] === 1) {
                 state.grid[r][c] = 3;
                 state.placedCats++;
@@ -796,7 +831,6 @@
             for (let i = 0; i < size; i++) {
                 for (let j = 0; j < size; j++) {
                     if (state.grid[i][j] === 3) continue; 
-                    
                     if (i === r || j === c || currentLevelData.regions[i][j] === region || 
                        (Math.abs(i-r) <= 1 && Math.abs(j-c) <= 1)) {
                         state.grid[i][j] = 2; 
@@ -821,11 +855,9 @@
             updateUI();
             updateBoardVisuals();
         }
-
+        
         function useCatHint() {
-            // Заготовка под подсказку для кота
             if (state.hintsCat <= 0) return;
-            // Можно реализовать логику открытия правильного кота
         }
 
         function updateBoardVisuals() {
@@ -1065,36 +1097,8 @@
         document.getElementById('setting-music').addEventListener('change', (e) => state.settings.music = e.target.checked);
         document.getElementById('setting-vibro').addEventListener('change', (e) => state.settings.vibration = e.target.checked);
 
-        // --- АНИМАЦИЯ КОТА ИЗ SPRITESHEET (64 Кадра, сетка 8x8) ---
-        let currentCatFrame = 0;
-        const TOTAL_FRAMES = 64;
-        const COLS = 8;
-        // Задаем задержку в мс между кадрами для плавной анимации (приблизительно 25 fps)
-        const FRAME_DELAY = 40; 
-
-        function animateCats() {
-            const col = currentCatFrame % COLS;
-            const row = Math.floor(currentCatFrame / COLS);
-            
-            // Сдвиг background-position в процентах
-            // 8 колонок: шаг = 100 / (8 - 1) = 14.2857%
-            // 8 строк: шаг = 100 / (8 - 1) = 14.2857%
-            const posX = col * (100 / 7);
-            const posY = row * (100 / 7);
-            
-            document.documentElement.style.setProperty('--cat-bg-x', `${posX}%`);
-            document.documentElement.style.setProperty('--cat-bg-y', `${posY}%`);
-
-            currentCatFrame = (currentCatFrame + 1) % TOTAL_FRAMES;
-            setTimeout(animateCats, FRAME_DELAY);
-        }
-        
-        // Запуск глобального цикла анимации
-        animateCats();
-
-        // Инициализация при старте
+        // Инициализация при старте (показываем меню)
         switchView('main-menu');
-
     </script>
 </body>
 </html>
